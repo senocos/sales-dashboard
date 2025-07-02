@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Аналитика продаж: Ежедневный прогресс (%) с плановым уровнем</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #0b1a33; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+    h1 { text-align: center; font-size: 32px; margin: 20px 0; color: #00d8ff; }
+    .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; padding: 20px; box-sizing: border-box; }
+    .sidebar { background-color: #122b45; border-radius: 16px; padding: 20px; overflow-y: auto; max-height: calc(100vh - 80px); }
+    .sidebar h2 { font-size: 22px; margin-bottom: 15px; color: #00d8ff; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #ffffffcc; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px; border: none; border-radius: 8px; background-color: #0d2340; color: #ffffff; font-size: 14px; box-sizing: border-box; }
+    .form-group textarea { height: 80px; resize: vertical; }
+    .btn-submit { display: block; width: 100%; padding: 12px; background-color: #00bfff; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; color: #0b1a33; text-align: center; cursor: pointer; transition: background 0.3s; }
+    .btn-submit:hover { background-color: #009acd; }
+    .charts { overflow-y: auto; padding-right: 10px; }
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; padding-bottom: 20px; }
+    .chart-card { background-color: #122b45; border-radius: 16px; padding: 20px; box-shadow: 0 0 10px #00000055; height: 350px; display: flex; flex-direction: column; }
+    .chart-title { text-align: center; margin-top: 12px; font-size: 16px; color: #ffffffcc; }
+    canvas { flex: 1; width: 100% !important; height: auto !important; }
+  </style>
+</head>
+<body>
+  <h1>Ежедневный прогресс (%) с плановым уровнем</h1>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Настройки метрик</h2>
+      <form id="dataForm">
+        <div class="form-group"><label for="monthPicker">Месяц:</label><input type="month" id="monthPicker"></div>
+        <div class="form-group"><label>Выручка (месяц):</label><input type="number" step="any" id="planRevenue" placeholder="План за месяц"><label style="margin-top:8px;">Выручка факт:</label><textarea id="factRevenue" placeholder="900,1100,..."></textarea></div>
+        <div class="form-group"><label>% плана (месяц):</label><input type="number" step="any" id="planPercent" placeholder="План %"><label style="margin-top:8px;">% факт:</label><textarea id="factPercent" placeholder="80,85,..."></textarea></div>
+        <div class="form-group"><label>Выручка смена:</label><input type="number" step="any" id="planShift" placeholder="План"><label style="margin-top:8px;">Выручка смена факт:</label><textarea id="factShift" placeholder="100,120,..."></textarea></div>
+        <div class="form-group"><label>Средний чек:</label><input type="number" step="any" id="planAvgCheck" placeholder="План"><label style="margin-top:8px;">Средний чек факт:</label><textarea id="factAvgCheck" placeholder="20.5,21.0,..."></textarea></div>
+        <div class="form-group"><label>Загруженность:</label><input type="number" step="any" id="planLoad" placeholder="План"><label style="margin-top:8px;">Загруженность факт:</label><textarea id="factLoad" placeholder="75,80,..."></textarea></div>
+        <div class="form-group"><label>Клиентов всего:</label><input type="number" id="planClientsTotal" placeholder="План"><label style="margin-top:8px;">Клиентов всего факт:</label><textarea id="factClientsTotal" placeholder="50,60,..."></textarea></div>
+        <div class="form-group"><label>Клиентов новых:</label><input type="number" id="planClientsNew" placeholder="План"><label style="margin-top:8px;">Клиентов новых факт:</label><textarea id="factClientsNew" placeholder="10,12,..."></textarea></div>
+        <div class="form-group"><label>Заявки:</label><input type="number" id="planApplications" placeholder="План"><label style="margin-top:8px;">Заявки факт:</label><textarea id="factApplications" placeholder="5,7,..."></textarea></div>
+        <div class="form-group"><label>Прогноз выручки:</label><input type="number" step="any" id="planForecast" placeholder="План"><label style="margin-top:8px;">Прогноз факт:</label><textarea id="factForecast" placeholder="31000,32000,..."></textarea></div>
+        <button type="submit" class="btn-submit">Показать прогресс</button>
+      </form>
+    </aside>
+    <section class="charts">
+      <div class="charts-grid">
+        <div class="chart-card"><canvas id="chartRevenue"></canvas><div class="chart-title">Выручка</div></div>
+        <div class="chart-card"><canvas id="chartPercent"></canvas><div class="chart-title">% плана</div></div>
+        <div class="chart-card"><canvas id="chartShift"></canvas><div class="chart-title">Выручка смена</div></div>
+        <div class="chart-card"><canvas id="chartAvgCheck"></canvas><div class="chart-title">Средний чек</div></div>
+        <div class="chart-card"><canvas id="chartLoad"></canvas><div class="chart-title">Загруженность</div></div>
+        <div class="chart-card"><canvas id="chartClientsTotal"></canvas><div class="chart-title">Клиентов всего</div></div>
+        <div class="chart-card"><canvas id="chartClientsNew"></canvas><div class="chart-title">Клиентов новых</div></div>
+        <div class="chart-card"><canvas id="chartApplications"></canvas><div class="chart-title">Заявок</div></div>
+        <div class="chart-card"><canvas id="chartForecast"></canvas><div class="chart-title">Прогноз выручки</div></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function parse(text, days) {
+      const arr = text ? text.split(',').map(s => parseFloat(s.trim())) : [];
+      return arr.length >= days ? arr.slice(0, days) : arr.concat(Array(days - arr.length).fill(null));
+    }
+    function dailyPlan(monthPlan, days) {
+      return isNaN(monthPlan) ? Array(days).fill(null) : Array(days).fill(monthPlan / days);
+    }
+    function renderProgress(ctx, labels, plan, fact, color) {
+      const progress = labels.map((_, i) => plan[i] ? (fact[i] / plan[i]) * 100 : null);
+      const planLine = Array(labels.length).fill(100);
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'План', data: planLine, borderColor: '#888', borderDash: [5,5], backgroundColor: 'transparent', borderWidth: 2 },
+            { label: 'Прогресс (%)', data: progress, borderColor: color, backgroundColor: 'transparent', borderWidth: 3, pointRadius: 4, tension: 0.3 }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff' } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' }, grid: { color: '#ffffff22' } },
+            y: { beginAtZero: true, ticks: { color: '#ffffff' }, grid: { color: '#ffffff22' } }
+          }
+        }
+      });
+    }
+
+    document.getElementById('dataForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const monthVal = document.getElementById('monthPicker').value;
+      const [y, m] = monthVal.split('-').map(Number);
+      const days = y && m ? new Date(y, m, 0).getDate() : 30;
+      const labels = Array.from({ length: days }, (_, i) => i + 1);
+
+      const metrics = [
+        { plan: 'planRevenue', fact: 'factRevenue', chart: 'chartRevenue', color: '#00d8ff' },
+        { plan: 'planPercent', fact: 'factPercent', chart: 'chartPercent', color: '#ffc107' },
+        { plan: 'planShift', fact: 'factShift', chart: 'chartShift', color: '#ff5722' },
+        { plan: 'planAvgCheck', fact: 'factAvgCheck', chart: 'chartAvgCheck', color: '#9c27b0' },
+        { plan: 'planLoad', fact: 'factLoad', chart: 'chartLoad', color: '#3f51b5' },
+        { plan: 'planClientsTotal', fact: 'factClientsTotal', chart: 'chartClientsTotal', color: '#ff4081' },
+        { plan: 'planClientsNew', fact: 'factClientsNew', chart: 'chartClientsNew', color: '#00ffab' },
+        { plan: 'planApplications', fact: 'factApplications', chart: 'chartApplications', color: '#ff9800' },
+        { plan: 'planForecast', fact: 'factForecast', chart: 'chartForecast', color: '#2196f3' }
+      ];
+
+      metrics.forEach(met => {
+        const planArr = dailyPlan(parseFloat(document.getElementById(met.plan).value), days);
+        const factArr = parse(document.getElementById(met.fact).value, days);
+        const ctx = document.getElementById(met.chart).getContext('2d');
+        if (ctx.chart) ctx.chart.destroy();
+        ctx.chart = renderProgress(ctx, labels, planArr, factArr, met.color);
+      });
+    });
+  </script>
+</body>
+</html>
